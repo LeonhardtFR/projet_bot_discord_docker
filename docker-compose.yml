@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  bot:
+    build: ./bot
+    restart: always
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; os.system('curl --fail http://localhost:8080/ || exit 1')"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+    volumes:
+      - mydb:/app/db
+
+  api:
+    build: ./api
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - mydb:/app/db
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+    
+
+volumes:
+  mydb:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./db

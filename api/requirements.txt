@@ -1,0 +1,5 @@
+Flask
+Authlib
+requests
+prometheus-client
+flask_session

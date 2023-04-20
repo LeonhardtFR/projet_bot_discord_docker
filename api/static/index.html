@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pétitions</title>
+  <style>
+  </style>
+  <script>
+    async function loadPetitions(status) {
+      const response = await fetch(`/api/petitions?status=${status}`);
+      const petitions = await response.json();
+
+      const petitionsList = document.getElementById("petitions-list");
+      petitionsList.innerHTML = "";
+
+      petitions.forEach(petition => {
+        const listItem = document.createElement("li");
+        listItem.innerHTML = `
+          <h3>${petition.title}</h3>
+          <p>${petition.content}</p>
+          <p>Oui: ${petition.yes_votes}, Non: ${petition.no_votes}</p>
+        `;
+
+        petitionsList.appendChild(listItem);
+      });
+    }
+    
+    async function checkAuthentication() {
+      const response = await fetch('/api/authenticated');
+      const data = await response.json();
+      
+      if (!data.authenticated) {
+        window.location.href = '/login.html';
+      }
+    }
+
+    window.onload = () => {
+      checkAuthentication();
+      loadPetitions("open");
+    };
+  </script>
+</head>
+<body>
+  <h1>Pétitions</h1>
+  <button onclick="loadPetitions('open')">Ouvertes</button>
+  <button onclick="loadPetitions('closed')">Fermées</button>
+  <ul id="petitions-list"></ul>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Connexion</title>
+  <script>
+    function redirectToDiscordOAuth() {
+      const clientId = '1093521955698782278';
+      const redirectUri = encodeURIComponent('http://127.0.0.1:8080/login/callback');
+
+      const responseType = 'code';
+      const scope = encodeURIComponent('identify email');
+  
+      window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scope}`;
+    }
+  </script>
+  
+</head>
+<body>
+  <h1>Se connecter avec Discord</h1>
+  <button onclick="redirectToDiscordOAuth()">Connexion</button>
+</body>
+</html>
