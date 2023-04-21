@@ -135,6 +135,7 @@ async def vote_petition(ctx, petition_id: int, vote: str):
         conn.close()
     except Error as e:
         print(e)
+        print(f"Erreur lors du vote: {e}")
         await ctx.send("Erreur lors du vote")
 
 '''
@@ -181,7 +182,7 @@ async def check_petitions_status():
     petitions = cursor.fetchall()
 
     for petition in petitions:
-        id, title, content, duration, status, yes_votes, no_votes = petition
+        id, title, content, duration, status, yes_votes, no_votes, created_at = petition
         petition_end_time = datetime.datetime.fromtimestamp(id) + datetime.timedelta(seconds=duration)
 
         if now >= petition_end_time:
