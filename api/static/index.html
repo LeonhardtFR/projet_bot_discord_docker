@@ -97,6 +97,15 @@
   text-align: center;
 }
 
+.vote-up {
+  color: blue;
+}
+
+.vote-down {
+  color: red;
+}
+
+
   </style>
   <script>
 async function loadPetitions(status) {
@@ -112,8 +121,8 @@ async function loadPetitions(status) {
       <h3>${petition.title}</h3>
       <p>${petition.content}</p>
       <p>
-        <span class="vote-icons"><i class="fas fa-thumbs-up"></i> ${petition.yes_votes}</span>
-        <span class="vote-icons"><i class="fas fa-thumbs-down"></i> ${petition.no_votes}</span>
+        <span class="vote-icons vote-up"><i class="fas fa-thumbs-up"></i> ${petition.yes_votes}</span>
+        <span class="vote-icons vote-down"><i class="fas fa-thumbs-down"></i> ${petition.no_votes}</span>
       </p>
     `;
     listItem.addEventListener("click", () => {
