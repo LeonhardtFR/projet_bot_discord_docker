@@ -6,9 +6,10 @@ import sqlite3
 from sqlite3 import Error
 import datetime
 import asyncio
-from prometheus_client import start_http_server, Counter
+from prometheus_client import start_http_server, Counter, Gauge
 import random
 import time
+
 
 print("Demarrage du bot...")
 load_dotenv()
@@ -27,30 +28,28 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "db", "petitions.db")
 
 
-
 # ------Ajout de la bibliothèque prometheus_client------ #
-# Créez des compteurs pour les métriques que vous souhaitez suivre
+# compteurs pour les métriques
 messages_received = Counter("bot_messages_received_total", "Nombre de messages reçus par le bot")
 commands_executed = Counter("bot_commands_executed_total", "Nombre de commandes exécutées par le bot")
+bot_latency = Gauge("bot_latency_seconds", "Latence du bot en secondes")
 
-# Démarrez un serveur HTTP pour exposer les métriques
+# serveur HTTP pour exposer les metriques
 start_http_server(8000)
 
-# Mettez à jour les compteurs dans vos fonctions de gestion des événements et commandes
+# mettre à jour les compteurs dans vos fonctions de gestion des événements et commandes
 @bot.event
 async def on_message(message):
+    start_time = time.time()
     messages_received.inc()
     await bot.process_commands(message)
+    latency = time.time() - start_time
+    bot_latency.set(latency)
 
 @bot.command(name="example_command")
 async def _example_command(ctx):
     commands_executed.inc()
     await ctx.send("Commande exemple exécutée")
-
-
-
-
-
 
 async def create_petition(ctx, title: str, content: str, duration: int):
     print("Création de la pétition :", title, content, duration)
@@ -59,7 +58,8 @@ async def create_petition(ctx, title: str, content: str, duration: int):
     try:
         conn = sqlite3.connect("./db/petitions.db")
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO petitions (title, content, duration) VALUES (?, ?, ?)", (title, content, duration))
+        created_at = datetime.datetime.now()
+        cursor.execute("INSERT INTO petitions (title, content, duration, created_at) VALUES (?, ?, ?, ?)", (title, content, duration, created_at))
         conn.commit()
         petition_id = cursor.lastrowid
         conn.close()
@@ -99,14 +99,51 @@ async def _create_petition(ctx, *, args):
 async def on_ready():
     print(f'{bot.user.name} est connecté à Discord!')
     update_petitions_status.start()
+    
+async def vote_petition(ctx, petition_id: int, vote: str):
+    user_id = ctx.author.id
+    try:
+        conn = sqlite3.connect("./db/petitions.db")
+        cursor = conn.cursor()
 
+        cursor.execute("SELECT * FROM petitions WHERE id=? AND status='open'", (petition_id,))
+        petition = cursor.fetchone()
 
+        if petition:
+            cursor.execute("SELECT * FROM votes WHERE user_id=? AND petition_id=?", (user_id, petition_id))
+            user_vote = cursor.fetchone()
+
+            if user_vote:
+                await ctx.send("Vous avez déjà voté pour cette pétition.")
+                return
+
+            if vote.lower() == "oui":
+                cursor.execute("UPDATE petitions SET yes_votes = yes_votes + 1 WHERE id=?", (petition_id,))
+                cursor.execute("INSERT INTO votes (user_id, petition_id, vote) VALUES (?, ?, ?)", (user_id, petition_id, vote))
+            elif vote.lower() == "non":
+                cursor.execute("UPDATE petitions SET no_votes = no_votes + 1 WHERE id=?", (petition_id,))
+                cursor.execute("INSERT INTO votes (user_id, petition_id, vote) VALUES (?, ?, ?)", (user_id, petition_id, vote))
+            else:
+                await ctx.send("Vote non valide. Utilisez 'oui' ou 'non'")
+                return
+
+            conn.commit()
+            await ctx.send("Votre vote a été enregistré.")
+        else:
+            await ctx.send("Pétition introuvable")
+
+        conn.close()
+    except Error as e:
+        print(e)
+        await ctx.send("Erreur lors du vote")
+
+'''
 async def vote_petition(ctx, petition_id: int, vote: str):
     try:
         conn = sqlite3.connect("./db/petitions.db")
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM petitions WHERE id=? && status='open'", (petition_id,))
+        cursor.execute("SELECT * FROM petitions WHERE id=? AND status='open'", (petition_id,))
         petition = cursor.fetchone()
 
         if petition:
@@ -127,6 +164,8 @@ async def vote_petition(ctx, petition_id: int, vote: str):
     except Error as e:
         print(e)
         await ctx.send("Erreur lors du vote")
+'''
+
 
 @bot.command(name="vote")
 async def _vote(ctx, petition_id: int, vote: str):
